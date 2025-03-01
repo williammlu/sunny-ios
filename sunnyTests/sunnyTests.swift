@@ -1,17 +1,44 @@
-//
-//  sunnyTests.swift
-//  sunnyTests
-//
-//  Created by William Lu on 3/1/25.
-//
-
-import Testing
+import XCTest
 @testable import sunny
 
-struct sunnyTests {
+final class sunnyTests: XCTestCase {
 
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+    func testUserDefaultsStorage() {
+        let manager = UserManager()
+        let initialGoal = manager.user.goalMinutes
+        
+        manager.updateGoalMinutes(to: 25)
+        let loadedManager = UserManager()
+        XCTAssertEqual(loadedManager.user.goalMinutes, 25, "Goal minutes should persist across sessions")
+        
+        // Reset
+        manager.updateGoalMinutes(to: initialGoal)
     }
-
+    
+    func testStreakCalculation() {
+        let manager = UserManager()
+        manager.signOut() // Clear everything
+        manager.updateGoalMinutes(to: 15)
+        
+        // Add 3 days of completed data
+        let dayOffsets = [0, 1, 2] // today, yesterday, 2 days ago
+        for offset in dayOffsets {
+            // artificially set record
+            let date = Calendar.current.date(byAdding: .day, value: -offset, to: Date())!
+            manager.dailyRecords.append(
+                SunlightRecord(
+                    date: date,
+                    minutes: 15,
+                    isComplete: true
+                )
+            )
+        }
+        manager.saveRecords()
+        
+        let streak = manager.currentStreak()
+        XCTAssertEqual(streak, 3, "Should count a 3-day streak")
+        
+        // Cleanup
+        manager.signOut()
+    }
 }

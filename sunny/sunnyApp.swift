@@ -1,17 +1,18 @@
-//
-//  sunnyApp.swift
-//  sunny
-//
-//  Created by William Lu on 3/1/25.
-//
-
 import SwiftUI
 
 @main
 struct sunnyApp: App {
+    @StateObject var userManager = UserManager()
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if !userManager.didFinishOnboarding {
+                OnboardingView()
+                    .environmentObject(userManager)
+            } else {
+                MainTabView()
+                    .environmentObject(userManager)
+            }
         }
     }
 }
