@@ -8,13 +8,10 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: $selection) {
             // Streak
-            NavigationView {
-                StreakDashboardView {
-                    // Start tracking
+            StreakDashboardView {
+                withAnimation {
                     selection = 1 // Move to the Tracking tab
                 }
-                .navigationTitle("Streak")
-                .navigationBarHidden(true)
             }
             .tabItem {
                 Image(systemName: "flame")
@@ -23,11 +20,7 @@ struct MainTabView: View {
             .tag(0)
             
             // Tracking
-            NavigationView {
-                TrackingView()
-                    .navigationTitle("Track")
-                    .navigationBarHidden(true)
-            }
+            TrackingView()
             .tabItem {
                 Image(systemName: "sun.max.fill")
                 Text("Track")
@@ -35,11 +28,7 @@ struct MainTabView: View {
             .tag(1)
             
             // Calendar
-            NavigationView {
-                CalendarView()
-                    .navigationTitle("Calendar")
-                    .navigationBarHidden(true)
-            }
+            CalendarView()
             .tabItem {
                 Image(systemName: "calendar")
                 Text("Calendar")
@@ -47,11 +36,7 @@ struct MainTabView: View {
             .tag(2)
             
             // Profile
-            NavigationView {
-                ProfileView()
-                    .navigationTitle("Profile")
-                    .navigationBarHidden(true)
-            }
+            ProfileView()
             .tabItem {
                 Image(systemName: "person.crop.circle")
                 Text("Profile")

@@ -11,9 +11,9 @@ class UserManager: ObservableObject {
     /// Track whether user completed onboarding.
     @Published var didFinishOnboarding: Bool
     
-    private let userDefaultsKey = "sunny_user"
-    private let recordsKey = "sunny_records"
-    private let onboardingKey = "sunny_onboarding"
+    private let userDefaultsKey = "sunny_soul_user"
+    private let recordsKey = "sunny_soul_records"
+    private let onboardingKey = "sunny_soul_onboarding"
     
     init() {
         // Load from UserDefaults or use defaults.
@@ -71,17 +71,14 @@ class UserManager: ObservableObject {
     
     // MARK: - Sunlight Recording
     
-    /// Start or update today's record by adding minutes of sunlight (sim).
     func trackSunlight(minutes: Int) {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         
         if let index = dailyRecords.firstIndex(where: { calendar.isDate($0.date, inSameDayAs: today) }) {
-            // Update existing record
             dailyRecords[index].minutes += minutes
             dailyRecords[index].isComplete = dailyRecords[index].minutes >= user.goalMinutes
         } else {
-            // Add new record
             let new = SunlightRecord(date: today,
                                      minutes: minutes,
                                      isComplete: minutes >= user.goalMinutes)
@@ -90,24 +87,20 @@ class UserManager: ObservableObject {
         saveRecords()
     }
     
-    /// Returns how many days in a row user has completed the daily goal.
     func currentStreak() -> Int {
         let calendar = Calendar.current
-        // We'll walk backward from today until the chain breaks.
         let sorted = dailyRecords.sorted { $0.date > $1.date }
         
         var streak = 0
         var dayOffset = 0
         
         for rec in sorted {
-            // rec.date must be offset from "today" by dayOffset
             let comp = calendar.date(byAdding: .day, value: -dayOffset, to: Date())!
             let sameDay = calendar.isDate(comp, inSameDayAs: rec.date)
             if sameDay && rec.isComplete {
                 streak += 1
                 dayOffset += 1
             } else {
-                // as soon as we find a day that doesn't match or not complete, break
                 break
             }
         }
@@ -115,36 +108,27 @@ class UserManager: ObservableObject {
         return streak
     }
     
-    /// Returns total days ever completed
     func totalCompleted() -> Int {
         dailyRecords.filter { $0.isComplete }.count
     }
     
-    /// Returns the weekly records from Sunday-Saturday
     func weeklyRecords() -> [SunlightRecord] {
-        // We'll figure out which day of the week is Sunday -> Saturday
-        // For simplicity, assume calendar Sunday as .weekday=1
         let cal = Calendar.current
         let startOfWeek = cal.startOfDay(for: Date())
         let dayOfWeek = cal.component(.weekday, from: startOfWeek)
         
-        // We'll gather records for the current Sunday-Saturday window
-        // But simpler approach: just build an array of 7 days from Sunday
         var result: [SunlightRecord] = []
         for offset in 0..<7 {
             guard let day = cal.date(byAdding: .day, value: offset - (dayOfWeek - 1), to: startOfWeek) else { continue }
-            // see if we have a record for that date
             if let rec = dailyRecords.first(where: { cal.isDate($0.date, inSameDayAs: day) }) {
                 result.append(rec)
             } else {
-                // create a "dummy" record with 0 minutes
                 result.append(SunlightRecord(date: day, minutes: 0, isComplete: false))
             }
         }
         return result
     }
     
-    /// Retrieve monthly records for a given month-year
     func recordsForMonth(month: Int, year: Int) -> [SunlightRecord] {
         let cal = Calendar.current
         return dailyRecords.filter {
@@ -153,9 +137,7 @@ class UserManager: ObservableObject {
         }
     }
     
-    /// Mark sign-out logic (for demonstration).
     func signOut() {
-        // Clear user & records for demo
         user = UserProfile(
             email: "user@example.com",
             fullName: "Demo User",

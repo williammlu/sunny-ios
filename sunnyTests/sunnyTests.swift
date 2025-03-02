@@ -21,9 +21,8 @@ final class sunnyTests: XCTestCase {
         manager.updateGoalMinutes(to: 15)
         
         // Add 3 days of completed data
-        let dayOffsets = [0, 1, 2] // today, yesterday, 2 days ago
+        let dayOffsets = [0, 1, 2]
         for offset in dayOffsets {
-            // artificially set record
             let date = Calendar.current.date(byAdding: .day, value: -offset, to: Date())!
             manager.dailyRecords.append(
                 SunlightRecord(
@@ -38,7 +37,6 @@ final class sunnyTests: XCTestCase {
         let streak = manager.currentStreak()
         XCTAssertEqual(streak, 3, "Should count a 3-day streak")
         
-        // Cleanup
         manager.signOut()
     }
 }

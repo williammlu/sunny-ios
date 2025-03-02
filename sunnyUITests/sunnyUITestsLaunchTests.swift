@@ -8,8 +8,8 @@ final class sunnyUITestsLaunchTests: XCTestCase {
     func testLaunch() throws {
         let app = XCUIApplication()
         app.launch()
-
+        
         // Possibly take screenshot or do launch verifications
-        let _ = app.screenshot()
+        _ = app.screenshot()
     }
 }
