@@ -62,7 +62,6 @@ struct TrackingView: View {
                     if showMoon {
                         moonIconView
                             .frame(width: 120, height: 120)
-                            // Animate based on lumens (Float is Equatable, so it's valid)
                             .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true),
                                        value: captureManager.lumens)
                     } else if showBrightSun {
@@ -107,17 +106,22 @@ struct TrackingView: View {
             }
             .padding()
             .sheet(isPresented: $showResultScreen) {
+                // Demo result screen
                 ResultView(
                     minutes: completedMinutes,
                     goalMinutes: userManager.user.goalMinutes,
                     onContinue: {
+                        // Just close the sheet
                         showResultScreen = false
                     }
                 )
             }
         }
         .onAppear {
+            // Now we call startSession off the main thread automatically
+            // because inside the manager we do sessionQueue.async { ... }
             captureManager.startSession()
+            
             let totalSeconds = userManager.user.goalMinutes * 60
             remainingSeconds = totalSeconds
             startCountdownTimer()
@@ -127,7 +131,7 @@ struct TrackingView: View {
             captureManager.stopSession()
             timer?.invalidate()
         }
-        // Instead of dynamicMember subscript, we use the raw property
+        // We update the icons each time lumens changes
         .onChange(of: captureManager.lumens) { newVal in
             updateLightCondition(brightness: newVal)
         }
@@ -139,11 +143,9 @@ extension TrackingView {
     
     private var doneBarButton: some View {
         ZStack(alignment: .leading) {
-            // Outline
             RoundedRectangle(cornerRadius: 8)
                 .stroke(Color.orange, lineWidth: 2)
             
-            // Fill based on fillFraction
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.orange)
                 .frame(width: fillFraction * UIScreen.main.bounds.width * 0.60)
@@ -173,11 +175,9 @@ extension TrackingView {
     }
     
     private var cloudySunView: some View {
-        ZStack {
-            Image(systemName: "cloud.sun.fill")
-                .resizable()
-                .foregroundColor(.yellow.opacity(0.8))
-        }
+        Image(systemName: "cloud.sun.fill")
+            .resizable()
+            .foregroundColor(.yellow.opacity(0.8))
     }
     
     private var lowSunView: some View {
@@ -220,6 +220,7 @@ extension TrackingView {
         let actualTrackedSeconds = (userManager.user.goalMinutes * 60) - remainingSeconds
         let minutes = actualTrackedSeconds / 60
         
+        // Log session
         userManager.trackSunlight(minutes: minutes)
         completedMinutes = minutes
         
@@ -246,9 +247,8 @@ extension TrackingView {
 
 // MARK: - Light Condition
 extension TrackingView {
-    
     private func updateLightCondition(brightness: Float) {
-        print("brightness", brightness)
+        // If it's night, prefer the moon icon
         if isNight {
             showMoon = true
             showBrightSun = false
@@ -256,6 +256,7 @@ extension TrackingView {
             return
         }
         
+        // E.g. threshold for lumens:
         if brightness > 20000 {
             // Very bright
             showBrightSun = true

@@ -3,7 +3,7 @@ import AVFoundation
 import SwiftUI
 
 /// A class that handles front camera capture, locks exposure,
-/// and calculates an approximate lumens (or lux) estimate based on
+/// and calculates approximate lumens (or lux) estimate based on
 /// average pixel brightness, ISO, shutter speed, and aperture.
 /// Must be a class to adopt AVCaptureVideoDataOutputSampleBufferDelegate.
 final class VideoCaptureManager: NSObject, ObservableObject {
@@ -17,56 +17,62 @@ final class VideoCaptureManager: NSObject, ObservableObject {
     private let videoOutput = AVCaptureVideoDataOutput()
     private var activeDevice: AVCaptureDevice?
     
-    // For camera setup
+    /// We'll use a separate queue to configure and start the session
+    private let sessionQueue = DispatchQueue(label: "com.sunny.videoSessionQueue")
+    
     func startSession() {
-        let session = AVCaptureSession()
-        session.sessionPreset = .medium
-        
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera,
-                                                   for: .video,
-                                                   position: .front) else {
-            print("No front camera available.")
-            return
-        }
-        activeDevice = device
-        
-        do {
-            // Attempt to lock exposure to a known mode:
-            try device.lockForConfiguration()
-            // For instance, set it to a constant ISO and shutter speed if possible:
-            let desiredISO: Float = 100.0
-            let minDuration = CMTimeMake(value: 1, timescale: 60)  // 1/60
-            if device.isExposureModeSupported(.custom) {
-                // Set manual exposure
-                device.setExposureModeCustom(duration: minDuration, iso: desiredISO, completionHandler: nil)
+        // Move session setup off the main thread
+        sessionQueue.async {
+            let session = AVCaptureSession()
+            session.sessionPreset = .medium
+            
+            guard let device = AVCaptureDevice.default(.builtInWideAngleCamera,
+                                                       for: .video,
+                                                       position: .front) else {
+                print("No front camera available.")
+                return
             }
-            device.unlockForConfiguration()
+            self.activeDevice = device
             
-            // Build input:
-            let input = try AVCaptureDeviceInput(device: device)
-            if session.canAddInput(input) {
-                session.addInput(input)
+            do {
+                try device.lockForConfiguration()
+                let desiredISO: Float = 100.0
+                let minDuration = CMTimeMake(value: 1, timescale: 60)  // 1/60
+                if device.isExposureModeSupported(.custom) {
+                    device.setExposureModeCustom(duration: minDuration, iso: desiredISO, completionHandler: nil)
+                }
+                device.unlockForConfiguration()
+                
+                let input = try AVCaptureDeviceInput(device: device)
+                if session.canAddInput(input) {
+                    session.addInput(input)
+                }
+                
+                self.videoOutput.videoSettings = [
+                    kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+                ]
+                self.videoOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "cameraFrameQueue"))
+                
+                if session.canAddOutput(self.videoOutput) {
+                    session.addOutput(self.videoOutput)
+                }
+                
+                // Start running in background
+                session.startRunning()
+                self.captureSession = session
+                
+            } catch {
+                print("Error setting up camera input or locking exposure: \(error)")
             }
-            
-            videoOutput.videoSettings = [
-                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
-            ]
-            videoOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "cameraQueue"))
-            
-            if session.canAddOutput(videoOutput) {
-                session.addOutput(videoOutput)
-            }
-            
-            session.startRunning()
-            self.captureSession = session
-        } catch {
-            print("Error setting up camera input or locking exposure: \(error)")
         }
     }
     
     func stopSession() {
-        captureSession?.stopRunning()
-        captureSession = nil
+        // Also do this off main thread to avoid blocking UI
+        sessionQueue.async {
+            self.captureSession?.stopRunning()
+            self.captureSession = nil
+        }
     }
 }
 
@@ -115,9 +121,7 @@ extension VideoCaptureManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         var shutterSpeed: Float = 1.0/60.0
         var aperture: Float = 2.2  // default guess if lensAperture is unknown
         if let device = activeDevice {
-            // Note: might fail if device is not locked or if not available
             iso = device.iso
-            // Shutter speed in fractional seconds:
             let duration = device.exposureDuration
             if duration.isNumeric && duration.timescale != 0 {
                 shutterSpeed = Float(duration.value) / Float(duration.timescale)
@@ -126,28 +130,19 @@ extension VideoCaptureManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         }
         
         // 3) Approximate lumens or lux from these:
-        // (We can do a rough approach: we assume EV = log2(aperture^2 / shutterSpeed * 100 / iso).
-        // Then we combine with average pixel luma. This is purely heuristic and uncalibrated:
-        
         let ev = log2( (Double(aperture * aperture) / Double(shutterSpeed)) * (100.0 / Double(iso)) )
         
-        // We'll just combine EV with avgPixelLuma in a random scaling. In reality, you'd calibrate.
-        // e.g. approximateLux = constant * 2^ev * (avgPixelLuma / 255)
-        
         let pixelNorm = avgPixelLuma / 255.0
-        // A random scale factor "C" to get into a 0..200k lux-ish range for sun:
+        // scale factor
         let c: Double = 250.0
         
         let approximateLux = c * pow(2.0, ev) * pixelNorm
-        
-        // If we want "lumens" we can either treat them like lux over an area etc. We'll just call it lumens for demonstration:
         let approxLumens = Float(approximateLux)
         
         // 4) Publish to SwiftUI
         DispatchQueue.main.async {
             self.lumens = approxLumens
             self.brightnessValue = approxLumens
-            
         }
     }
 }
