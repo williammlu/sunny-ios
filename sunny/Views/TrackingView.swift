@@ -1,5 +1,7 @@
+
 import SwiftUI
 import AVFoundation
+import Charts  // If you want to use SwiftUI Charts (iOS 16+). If not, remove import.
 
 /// A struct for capturing brightness classification
 enum LightCondition {
@@ -18,22 +20,26 @@ struct TrackingView: View {
     // For time-of-day check
     @State private var isNight: Bool = false
     
-    // Countdown logic
-    @State private var remainingSeconds: Int = 0
-    @State private var timer: Timer?
+    // The total daily target in seconds
+    private var dailyTargetSeconds: Int {
+        userManager.user.goalMinutes * 60
+    }
     
-    // UI display states
+    // Accumulated seconds user has so far for today's session. They can pause/continue.
+    // (You might store this in your UserManager or local storage for real usage.)
+    @State private var accumulatedSeconds: Int = 0
+    
+    // Timer
+    @State private var timer: Timer?
+    @State private var isRunning = false  // is the session actively counting up?
+    
+    // UI states
     @State private var showMoon: Bool = false
     @State private var showCloudySun: Bool = false
     @State private var showBrightSun: Bool = false
     
-    // Done bar fill
-    @State private var fillFraction: CGFloat = 0.0
-    
-    // Session status
-    @State private var sessionComplete: Bool = false
+    // Whether to show a "Result" screen
     @State private var showResultScreen: Bool = false
-    @State private var completedMinutes: Int = 0
     
     var body: some View {
         ZStack {
@@ -48,14 +54,35 @@ struct TrackingView: View {
             )
             .edgesIgnoringSafeArea(.all)
             
-            VStack(spacing: 20) {
-                // Title
-                Text(sessionComplete ? "Session Complete" : "Sunlight Tracking")
+            VStack(spacing: 16) {
+                
+                // Title + day info
+                Text("Sunlight Tracking")
                     .font(.title2)
                     .bold()
                     .padding(.top, 16)
                 
-                Spacer()
+                // Our new chart for the last 15 min lumens
+                lumensGraphView
+                
+                // Show the progress bar for daily target
+                progressBar
+                
+                if accumulatedSeconds < dailyTargetSeconds {
+                    if isRunning {
+                        Text("Session in progress...")
+                            .foregroundColor(.secondary)
+                        Text("\(timeString(accumulatedSeconds)) so far")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Session paused at \(timeString(accumulatedSeconds))")
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    Text("You reached today's goal!")
+                        .foregroundColor(.green)
+                }
                 
                 // Pulsing icon
                 ZStack {
@@ -87,83 +114,115 @@ struct TrackingView: View {
                 Text(lightConditionText())
                     .font(.headline)
                 
-                if !sessionComplete {
-                    Text("Tracking in progress...")
-                        .foregroundColor(.secondary)
-                    Text("\(timeString(remainingSeconds)) left")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                }
-                
                 Spacer()
                 
-                // Done bar
-                doneBarButton
-                    .frame(height: 50)
-                    .padding(.horizontal, 40)
+                // Session control buttons
+                HStack(spacing: 20) {
+                    if accumulatedSeconds < dailyTargetSeconds {
+                        Button(isRunning ? "Pause" : "Resume") {
+                            toggleSession()
+                        }
+                        .font(.headline)
+                        .padding()
+                        .background(Color.orange.opacity(0.8))
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    } else {
+                        Button("New Session") {
+                            startNewSession()
+                        }
+                        .font(.headline)
+                        .padding()
+                        .background(Color.green.opacity(0.8))
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    }
+                    
+                    Button("Finish Today") {
+                        finishSessionForToday()
+                    }
+                    .font(.headline)
+                    .padding()
+                    .background(Color.red.opacity(0.8))
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+                .padding(.horizontal, 40)
                 
                 Spacer()
             }
             .padding()
             .sheet(isPresented: $showResultScreen) {
-                // Demo result screen
                 ResultView(
-                    minutes: completedMinutes,
+                    minutes: accumulatedSeconds / 60,
                     goalMinutes: userManager.user.goalMinutes,
                     onContinue: {
-                        // Just close the sheet
                         showResultScreen = false
                     }
                 )
             }
         }
         .onAppear {
-            // Now we call startSession off the main thread automatically
-            // because inside the manager we do sessionQueue.async { ... }
+            // Start camera
             captureManager.startSession()
-            
-            let totalSeconds = userManager.user.goalMinutes * 60
-            remainingSeconds = totalSeconds
-            startCountdownTimer()
+            // If we want to load a saved "accumulatedSeconds", do so.
+            // For now, we just keep ephemeral state.
             classifyTimeOfDay()
         }
         .onDisappear {
             captureManager.stopSession()
-            timer?.invalidate()
+            stopTimer()
         }
-        // We update the icons each time lumens changes
         .onChange(of: captureManager.lumens) { newVal in
             updateLightCondition(brightness: newVal)
         }
     }
 }
 
-// MARK: - UI Subviews
+// MARK: - Subviews
 extension TrackingView {
     
-    private var doneBarButton: some View {
-        ZStack(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.orange, lineWidth: 2)
-            
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.orange)
-                .frame(width: fillFraction * UIScreen.main.bounds.width * 0.60)
-            
-            HStack {
-                Spacer()
-                Text(sessionComplete ? "Done" : "Finish Early")
-                    .foregroundColor(sessionComplete ? .white : .orange)
-                Spacer()
+    // Use SwiftUI's native Charts if iOS 16+ available. If not, remove or do a custom.
+    @ViewBuilder
+    private var lumensGraphView: some View {
+        if #available(iOS 16.0, *) {
+            Chart {
+                ForEach(Array(captureManager.lumensHistory.enumerated()), id: \.offset) { (index, lum) in
+                    LineMark(
+                        x: .value("Time", index),
+                        y: .value("Lumens", lum)
+                    )
+                }
             }
+            .frame(height: 150)
+            .padding(.horizontal)
+        } else {
+            // fallback if older iOS
+            Text("Lumens chart requires iOS 16+")
+                .foregroundColor(.secondary)
         }
-        .onTapGesture {
-            if !sessionComplete {
-                endSessionEarly()
-            } else {
-                finalizeSession()
+    }
+    
+    private var progressBar: some View {
+        // Display how much time we've logged vs daily target
+        let fraction = min(1.0, CGFloat(accumulatedSeconds) / CGFloat(dailyTargetSeconds))
+        
+        return VStack(alignment: .leading) {
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(height: 10)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.orange)
+                    .frame(width: fraction * UIScreen.main.bounds.width * 0.6, height: 10)
             }
+            .frame(height: 10)
+            
+            Text("\(timeString(accumulatedSeconds)) / \(timeString(dailyTargetSeconds))")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
+        .padding(.horizontal, 20)
     }
     
     private var brightSunView: some View {
@@ -194,61 +253,61 @@ extension TrackingView {
     }
 }
 
-// MARK: - Countdown Logic
+// MARK: - Session Logic
 extension TrackingView {
-    private func startCountdownTimer() {
+    
+    private func toggleSession() {
+        if isRunning {
+            stopTimer()
+        } else {
+            startTimer()
+        }
+    }
+    
+    private func startTimer() {
+        isRunning = true
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            remainingSeconds -= 1
-            if remainingSeconds < 0 {
-                endSession()
+            accumulatedSeconds += 1
+            if accumulatedSeconds >= dailyTargetSeconds {
+                // Reached today's goal automatically
+                stopTimer()
+                // Possibly show result or just do a message
             }
-            let totalSeconds = userManager.user.goalMinutes * 60
-            fillFraction = 1.0 - (CGFloat(remainingSeconds) / CGFloat(totalSeconds))
         }
     }
     
-    private func endSessionEarly() {
-        endSession()
-    }
-    
-    private func endSession() {
-        sessionComplete = true
+    private func stopTimer() {
+        isRunning = false
         timer?.invalidate()
         timer = nil
-        
-        let actualTrackedSeconds = (userManager.user.goalMinutes * 60) - remainingSeconds
-        let minutes = actualTrackedSeconds / 60
-        
-        // Log session
-        userManager.trackSunlight(minutes: minutes)
-        completedMinutes = minutes
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            showResultScreen = true
-        }
     }
     
-    private func finalizeSession() {
+    private func finishSessionForToday() {
+        // The user wants to end today's tracking. Possibly show result, log partial.
+        stopTimer()
+        
+        // Log the partial or full session
+        let minutes = accumulatedSeconds / 60
+        userManager.trackSunlight(minutes: minutes)  // We store it
+        // Show result if we want
         showResultScreen = true
     }
     
-    private func timeString(_ secs: Int) -> String {
-        let m = secs / 60
-        let s = secs % 60
-        return String(format: "%d min %02d sec", m, s)
-    }
-    
-    private func classifyTimeOfDay() {
-        let hour = Calendar.current.component(.hour, from: Date())
-        isNight = (hour < 6 || hour > 19)
+    private func startNewSession() {
+        // Reset for a new day or new session
+        accumulatedSeconds = 0
+        showResultScreen = false
+        isRunning = false
+        // Optionally start immediately
+        startTimer()
     }
 }
 
-// MARK: - Light Condition
+// MARK: - Helpers
 extension TrackingView {
+    
     private func updateLightCondition(brightness: Float) {
-        // If it's night, prefer the moon icon
         if isNight {
             showMoon = true
             showBrightSun = false
@@ -256,19 +315,15 @@ extension TrackingView {
             return
         }
         
-        // E.g. threshold for lumens:
         if brightness > 20000 {
-            // Very bright
             showBrightSun = true
             showCloudySun = false
             showMoon = false
         } else if brightness > 10000 {
-            // moderate
             showBrightSun = false
             showCloudySun = true
             showMoon = false
         } else {
-            // low
             showBrightSun = false
             showCloudySun = false
             showMoon = false
@@ -285,5 +340,16 @@ extension TrackingView {
         } else {
             return "Low light detected"
         }
+    }
+    
+    private func classifyTimeOfDay() {
+        let hour = Calendar.current.component(.hour, from: Date())
+        isNight = (hour < 6 || hour > 19)
+    }
+    
+    private func timeString(_ secs: Int) -> String {
+        let m = secs / 60
+        let s = secs % 60
+        return String(format: "%dm %02ds", m, s)
     }
 }

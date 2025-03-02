@@ -10,7 +10,9 @@ final class VideoCaptureManager: NSObject, ObservableObject {
     
     // Published approximate lumens read by SwiftUI
     @Published var lumens: Float = 0.0
-    @Published var brightnessValue: Float = 0.0
+    
+    // We store a rolling history of lumens for up to 15 minutes (900 seconds).
+    @Published var lumensHistory: [Float] = []
     
     // Internals
     private var captureSession: AVCaptureSession?
@@ -142,7 +144,12 @@ extension VideoCaptureManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         // 4) Publish to SwiftUI
         DispatchQueue.main.async {
             self.lumens = approxLumens
-            self.brightnessValue = approxLumens
+            
+            // Track rolling history of last 15 minutes (900 samples if ~1 fps).
+            self.lumensHistory.append(approxLumens)
+            if self.lumensHistory.count > 900 {
+                self.lumensHistory.removeFirst(self.lumensHistory.count - 900)
+            }
         }
     }
 }
