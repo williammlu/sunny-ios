@@ -1,29 +1,45 @@
+
 import Foundation
 import AVFoundation
 import SwiftUI
 
-/// A class that handles front camera capture, locks exposure,
-/// and calculates approximate lumens (or lux) estimate based on
-/// average pixel brightness, ISO, shutter speed, and aperture.
-/// Must be a class to adopt AVCaptureVideoDataOutputSampleBufferDelegate.
+/// A class that handles front camera capture, calculates approximate lux,
+/// using the approach from Stack Overflow: "avgLightness * (fRef^2/f^2) * (isoRef/iso) * (shutter/shutterRef)".
+/// We do blowout detection if >0.5% pixels are saturated.
 final class VideoCaptureManager: NSObject, ObservableObject {
     
-    // Published approximate lumens read by SwiftUI
-    @Published var lumens: Float = 0.0
+    // Approximate lux read by SwiftUI
+    @Published var lux: Float = 0.0
     
-    // We store a rolling history of lumens for up to 15 minutes (900 seconds).
-    @Published var lumensHistory: [Float] = []
+    // Rolling history of last 15 minutes of lux data (900 samples if ~1 fps).
+    @Published var luxHistory: [Float] = []
     
-    // Internals
+    // Whether camera has "initiated" (skip outputs first few seconds)
+    @Published var isCameraInitiated: Bool = false
+    
+    // If more than 0.5% pixels are saturated => show a UI warning
+    @Published var showBlownOutWarning: Bool = false
+    
+    // Internal camera session
     private var captureSession: AVCaptureSession?
     private let videoOutput = AVCaptureVideoDataOutput()
     private var activeDevice: AVCaptureDevice?
     
-    /// We'll use a separate queue to configure and start the session
+    // Queue for session config and start
     private let sessionQueue = DispatchQueue(label: "com.sunny.videoSessionQueue")
     
+    // Reference exposure values (ISO=100, Aperture=2.2, Shutter=1/60)
+    private let isoRef: Float = 100
+    private let apertureRef: Float = 2.2
+    private let shutterRef: Float = 1.0 / 60.0
+    private let delaySec: Float = 1.0
+    private let fpsCount: Int = 60
+    
+    // A final multiplier that converts the normalized brightness into approximate "lux"
+    // Tweak as needed to match real measurements.
+    private let luxScaleFactor: Double = 700.0
+    
     func startSession() {
-        // Move session setup off the main thread
         sessionQueue.async {
             let session = AVCaptureSession()
             session.sessionPreset = .medium
@@ -37,14 +53,7 @@ final class VideoCaptureManager: NSObject, ObservableObject {
             self.activeDevice = device
             
             do {
-                try device.lockForConfiguration()
-                let desiredISO: Float = 100.0
-                let minDuration = CMTimeMake(value: 1, timescale: 60)  // 1/60
-                if device.isExposureModeSupported(.custom) {
-                    device.setExposureModeCustom(duration: minDuration, iso: desiredISO, completionHandler: nil)
-                }
-                device.unlockForConfiguration()
-                
+                // Let ISO, shutter float
                 let input = try AVCaptureDeviceInput(device: device)
                 if session.canAddInput(input) {
                     session.addInput(input)
@@ -59,21 +68,26 @@ final class VideoCaptureManager: NSObject, ObservableObject {
                     session.addOutput(self.videoOutput)
                 }
                 
-                // Start running in background
                 session.startRunning()
                 self.captureSession = session
                 
+                // Wait a few seconds, then mark camera as initiated
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    self.isCameraInitiated = true
+                }
+                
             } catch {
-                print("Error setting up camera input or locking exposure: \(error)")
+                print("Error setting up camera: \(error)")
             }
         }
     }
     
     func stopSession() {
-        // Also do this off main thread to avoid blocking UI
         sessionQueue.async {
             self.captureSession?.stopRunning()
             self.captureSession = nil
+            self.isCameraInitiated = false
+            self.showBlownOutWarning = false
         }
     }
 }
@@ -85,7 +99,10 @@ extension VideoCaptureManager: AVCaptureVideoDataOutputSampleBufferDelegate {
                        didOutput sampleBuffer: CMSampleBuffer,
                        from connection: AVCaptureConnection) {
         
-        // 1) Compute average pixel brightness
+        // 1) If camera not initiated, skip
+        guard isCameraInitiated else { return }
+        
+        // 2) Access pixel buffer
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
         
@@ -97,31 +114,48 @@ extension VideoCaptureManager: AVCaptureVideoDataOutputSampleBufferDelegate {
             return
         }
         
-        var totalLuma: Double = 0
+        // We step by 20 for performance. Tweak as needed.
         let step = 20
-        
+        var totalLuma: Double = 0
+        var blowOutCount = 0
+        var totalCount = 0
+        var totalR: Double = 0
+        var totalG: Double = 0
+        var totalB: Double = 0
+
         for y in stride(from: 0, to: height, by: step) {
             for x in stride(from: 0, to: width, by: step) {
-                let offset = (y * width + x) * 4
-                // BGRA
-                let b = Double(base[offset + 0])
-                let g = Double(base[offset + 1])
-                let r = Double(base[offset + 2])
-                // naive luminance
-                let lum = 0.299*r + 0.587*g + 0.114*b
-                totalLuma += lum
+            let offset = (y * width + x) * 4
+            let b = Double(base[offset + 0])
+            let g = Double(base[offset + 1])
+            let r = Double(base[offset + 2])
+            
+            totalR += r
+            totalG += g
+            totalB += b
+            
+            // blow-out detection
+            if (r > 250 && g > 250 && b > 250) {
+                blowOutCount += 1
+            }
+            totalCount += 1
             }
         }
-        
-        let samples = (width/step) * (height/step)
-        let avgPixelLuma = totalLuma / Double(samples)
-        
+
+        // naive luminance
+        let lum = (0.2126 * totalR + 0.7152 * totalG + 0.0722 * totalB) / Double(totalCount)
+        totalLuma = lum
         CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
         
-        // 2) Gather exposure settings
-        var iso: Float = 100.0
-        var shutterSpeed: Float = 1.0/60.0
-        var aperture: Float = 2.2  // default guess if lensAperture is unknown
+        let blowOutRatio = Double(blowOutCount) / Double(totalCount)
+        // If more than 2% => blow out warning
+        let blowOutWarning = blowOutRatio >= 0.02
+        
+        // 3) Gather actual exposure settings
+        var iso: Float = 0
+        var shutterSpeed: Float = 0
+        var aperture: Float = 0
+        
         if let device = activeDevice {
             iso = device.iso
             let duration = device.exposureDuration
@@ -129,26 +163,53 @@ extension VideoCaptureManager: AVCaptureVideoDataOutputSampleBufferDelegate {
                 shutterSpeed = Float(duration.value) / Float(duration.timescale)
             }
             aperture = device.lensAperture
+        } else {
+            // no outputs
+            print("I can't get any real values!")
         }
         
-        // 3) Approximate lumens or lux from these:
-        let ev = log2( (Double(aperture * aperture) / Double(shutterSpeed)) * (100.0 / Double(iso)) )
+        // 4) If iso=0, shutter=0, or aperture=0 => skip
+        if iso <= 0 || shutterSpeed <= 0 || aperture <= 0 {
+            DispatchQueue.main.async {
+                self.lux = 0
+                self.luxHistory.append(0)
+                if self.luxHistory.count > 900 {
+                    self.luxHistory.removeFirst(self.luxHistory.count - 900)
+                }
+                self.showBlownOutWarning = false
+            }
+            return
+        }
         
-        let pixelNorm = avgPixelLuma / 255.0
-        // scale factor
-        let c: Double = 250.0
+        // 5) average pixel brightness
+        let sampleCount = Double(totalCount)
+        let avgLuma = totalLuma / sampleCount
         
-        let approximateLux = c * pow(2.0, ev) * pixelNorm
-        let approxLumens = Float(approximateLux)
+        // 6) normalizing formula from stack overflow:
+        // L_final = L * (apertureRef^2 / aperture^2) * (isoRef / iso) * (shutterSpeed / shutterRef)
+        // Then multiply by an overall scale factor => approximate lux
+        let ratioAperture = Double(apertureRef*apertureRef) / Double(aperture*aperture)
+        let ratioISO = Double(isoRef) / Double(iso)
+        let ratioShutter = Double(shutterSpeed) / Double(shutterRef)
         
-        // 4) Publish to SwiftUI
+        let normalizedValue = avgLuma * ratioAperture * ratioISO * ratioShutter
+        let approximateLux = Float(normalizedValue * luxScaleFactor)
+        
+        // 7) Print for debugging
+        print("""
+        [Lux Calc] blowOut=\(blowOutRatio*100)%, iso=\(iso), aperture=\(aperture), shutter=\(shutterSpeed),
+        avgLuma=\(avgLuma), ratioAperture=\(ratioAperture), ratioISO=\(ratioISO), ratioShutter=\(ratioShutter),
+        => normalized=\(normalizedValue), => lux=\(approximateLux)
+        """)
+        
+        // 8) Publish to SwiftUI
         DispatchQueue.main.async {
-            self.lumens = approxLumens
+            self.lux = approximateLux
+            self.showBlownOutWarning = blowOutWarning
             
-            // Track rolling history of last 15 minutes (900 samples if ~1 fps).
-            self.lumensHistory.append(approxLumens)
-            if self.lumensHistory.count > 900 {
-                self.lumensHistory.removeFirst(self.lumensHistory.count - 900)
+            self.luxHistory.append(approximateLux)
+            if self.luxHistory.count > 900 {
+                self.luxHistory.removeFirst(self.luxHistory.count - 900)
             }
         }
     }

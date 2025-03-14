@@ -1,7 +1,7 @@
 
 import SwiftUI
 import AVFoundation
-import Charts  // If you want to use SwiftUI Charts (iOS 16+). If not, remove import.
+import Charts
 
 /// A struct for capturing brightness classification
 enum LightCondition {
@@ -25,21 +25,23 @@ struct TrackingView: View {
         userManager.user.goalMinutes * 60
     }
     
-    // Accumulated seconds user has so far for today's session. They can pause/continue.
-    // (You might store this in your UserManager or local storage for real usage.)
+    // Accumulated seconds user has so far for today's session
     @State private var accumulatedSeconds: Int = 0
     
     // Timer
     @State private var timer: Timer?
     @State private var isRunning = false  // is the session actively counting up?
     
-    // UI states
+    // UI states for icons
     @State private var showMoon: Bool = false
     @State private var showCloudySun: Bool = false
     @State private var showBrightSun: Bool = false
     
     // Whether to show a "Result" screen
     @State private var showResultScreen: Bool = false
+    
+    // A local state to show a "toast" or ephemeral warning if camera is "blown out"
+    @State private var showBlownOutToast: Bool = false
     
     var body: some View {
         ZStack {
@@ -56,14 +58,14 @@ struct TrackingView: View {
             
             VStack(spacing: 16) {
                 
-                // Title + day info
+                // Title
                 Text("Sunlight Tracking")
                     .font(.title2)
                     .bold()
                     .padding(.top, 16)
                 
-                // Our new chart for the last 15 min lumens
-                lumensGraphView
+                // Our chart for last 15 min of lux
+                luxGraphView
                 
                 // Show the progress bar for daily target
                 progressBar
@@ -90,27 +92,26 @@ struct TrackingView: View {
                         moonIconView
                             .frame(width: 120, height: 120)
                             .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true),
-                                       value: captureManager.lumens)
+                                       value: captureManager.lux)
                     } else if showBrightSun {
                         brightSunView
                             .frame(width: 120, height: 120)
                             .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true),
-                                       value: captureManager.lumens)
+                                       value: captureManager.lux)
                     } else if showCloudySun {
                         cloudySunView
                             .frame(width: 120, height: 120)
                             .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true),
-                                       value: captureManager.lumens)
+                                       value: captureManager.lux)
                     } else {
                         lowSunView
                             .frame(width: 120, height: 120)
                             .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true),
-                                       value: captureManager.lumens)
+                                       value: captureManager.lux)
                     }
                 }
                 .padding(.bottom, 8)
                 
-                // Info about brightness
                 Text(lightConditionText())
                     .font(.headline)
                 
@@ -153,6 +154,7 @@ struct TrackingView: View {
             }
             .padding()
             .sheet(isPresented: $showResultScreen) {
+                // Show final minutes
                 ResultView(
                     minutes: accumulatedSeconds / 60,
                     goalMinutes: userManager.user.goalMinutes,
@@ -161,19 +163,45 @@ struct TrackingView: View {
                     }
                 )
             }
+            
+            // A simple "toast" overlay if blowOut is detected
+            if showBlownOutToast {
+                VStack {
+                    Text("Warning: The camera is overexposed. Lux readings may be inaccurate.")
+                        .padding()
+                        .background(Color.black.opacity(0.7))
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                        .onTapGesture {
+                            // Dismiss on tap
+                            showBlownOutToast = false
+                        }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 80)
+                .transition(.move(edge: .top))
+            }
         }
         .onAppear {
-            // Start camera
             captureManager.startSession()
-            // If we want to load a saved "accumulatedSeconds", do so.
-            // For now, we just keep ephemeral state.
             classifyTimeOfDay()
         }
         .onDisappear {
             captureManager.stopSession()
             stopTimer()
         }
-        .onChange(of: captureManager.lumens) { newVal in
+        // Listen for blow-out warning changes
+        .onChange(of: captureManager.showBlownOutWarning) { newVal in
+            // If camera sees >0.5% blown out => show a toast for 3s
+            if newVal == true {
+                showBlownOutToast = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    showBlownOutToast = false
+                }
+            }
+        }
+        // Also onChange of the lux value => update icons
+        .onChange(of: captureManager.lux) { newVal in
             updateLightCondition(brightness: newVal)
         }
     }
@@ -182,29 +210,26 @@ struct TrackingView: View {
 // MARK: - Subviews
 extension TrackingView {
     
-    // Use SwiftUI's native Charts if iOS 16+ available. If not, remove or do a custom.
     @ViewBuilder
-    private var lumensGraphView: some View {
+    private var luxGraphView: some View {
         if #available(iOS 16.0, *) {
             Chart {
-                ForEach(Array(captureManager.lumensHistory.enumerated()), id: \.offset) { (index, lum) in
+                ForEach(Array(captureManager.luxHistory.enumerated()), id: \.offset) { (index, luxVal) in
                     LineMark(
                         x: .value("Time", index),
-                        y: .value("Lumens", lum)
+                        y: .value("Lux", luxVal)
                     )
                 }
             }
             .frame(height: 150)
             .padding(.horizontal)
         } else {
-            // fallback if older iOS
-            Text("Lumens chart requires iOS 16+")
+            Text("Lux chart requires iOS 16+")
                 .foregroundColor(.secondary)
         }
     }
     
     private var progressBar: some View {
-        // Display how much time we've logged vs daily target
         let fraction = min(1.0, CGFloat(accumulatedSeconds) / CGFloat(dailyTargetSeconds))
         
         return VStack(alignment: .leading) {
@@ -270,9 +295,8 @@ extension TrackingView {
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             accumulatedSeconds += 1
             if accumulatedSeconds >= dailyTargetSeconds {
-                // Reached today's goal automatically
+                // Reached daily goal
                 stopTimer()
-                // Possibly show result or just do a message
             }
         }
     }
@@ -284,29 +308,22 @@ extension TrackingView {
     }
     
     private func finishSessionForToday() {
-        // The user wants to end today's tracking. Possibly show result, log partial.
         stopTimer()
-        
-        // Log the partial or full session
         let minutes = accumulatedSeconds / 60
-        userManager.trackSunlight(minutes: minutes)  // We store it
-        // Show result if we want
+        userManager.trackSunlight(minutes: minutes)
         showResultScreen = true
     }
     
     private func startNewSession() {
-        // Reset for a new day or new session
         accumulatedSeconds = 0
         showResultScreen = false
         isRunning = false
-        // Optionally start immediately
         startTimer()
     }
 }
 
 // MARK: - Helpers
 extension TrackingView {
-    
     private func updateLightCondition(brightness: Float) {
         if isNight {
             showMoon = true
@@ -333,9 +350,9 @@ extension TrackingView {
     private func lightConditionText() -> String {
         if isNight {
             return "Nighttime conditions"
-        } else if captureManager.lumens > 20000 {
+        } else if captureManager.lux > 20000 {
             return "Bright sunlight detected"
-        } else if captureManager.lumens > 10000 {
+        } else if captureManager.lux > 10000 {
             return "Moderate light detected"
         } else {
             return "Low light detected"
