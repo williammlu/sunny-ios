@@ -1,4 +1,3 @@
-
 import Foundation
 import AVFoundation
 import SwiftUI
@@ -8,20 +7,29 @@ import SwiftUI
 /// We do blowout detection if >0.5% pixels are saturated.
 final class VideoCaptureManager: NSObject, ObservableObject {
     
-    // Approximate lux read by SwiftUI
+    // MARK: - Constants for lux sampling
+    /// Number of minutes of lux data to keep in history.
+    private let kLuxHistoryMinutes = 15
+    /// If ~1 fps, 15 minutes => 900 samples
+    private let kLuxHistoryCount = 900
+    
+    // MARK: - Published properties
+    /// Approximate lux read by SwiftUI
     @Published var lux: Float = 0.0
     
-    // Rolling history of last 15 minutes of lux data (900 samples if ~1 fps).
+    /// Rolling history of last kLuxHistoryMinutes minutes
     @Published var luxHistory: [Float] = []
     
-    // Whether camera has "initiated" (skip outputs first few seconds)
+    /// Whether camera has “initiated” (skip outputs first few seconds)
     @Published var isCameraInitiated: Bool = false
     
-    // If more than 0.5% pixels are saturated => show a UI warning
+    /// If more than 0.5% pixels are saturated => show a UI warning
     @Published var showBlownOutWarning: Bool = false
     
-    // Internal camera session
-    private var captureSession: AVCaptureSession?
+    // MARK: - Session/Device properties
+    /// Public or internal session so TrackingView can display it, if needed
+    var captureSession: AVCaptureSession?
+    
     private let videoOutput = AVCaptureVideoDataOutput()
     private var activeDevice: AVCaptureDevice?
     
@@ -32,13 +40,12 @@ final class VideoCaptureManager: NSObject, ObservableObject {
     private let isoRef: Float = 100
     private let apertureRef: Float = 2.2
     private let shutterRef: Float = 1.0 / 60.0
-    private let delaySec: Float = 1.0
-    private let fpsCount: Int = 60
     
-    // A final multiplier that converts the normalized brightness into approximate "lux"
+    // A final multiplier that converts the normalized brightness into approximate “lux”
     // Tweak as needed to match real measurements.
-    private let luxScaleFactor: Double = 700.0
+    private let luxScaleFactor: Double = 450000.0
     
+    // MARK: - Lifecycle
     func startSession() {
         sessionQueue.async {
             let session = AVCaptureSession()
@@ -53,7 +60,7 @@ final class VideoCaptureManager: NSObject, ObservableObject {
             self.activeDevice = device
             
             do {
-                // Let ISO, shutter float
+                // Let ISO/shutter float
                 let input = try AVCaptureDeviceInput(device: device)
                 if session.canAddInput(input) {
                     session.addInput(input)
@@ -125,20 +132,20 @@ extension VideoCaptureManager: AVCaptureVideoDataOutputSampleBufferDelegate {
 
         for y in stride(from: 0, to: height, by: step) {
             for x in stride(from: 0, to: width, by: step) {
-            let offset = (y * width + x) * 4
-            let b = Double(base[offset + 0])
-            let g = Double(base[offset + 1])
-            let r = Double(base[offset + 2])
-            
-            totalR += r
-            totalG += g
-            totalB += b
-            
-            // blow-out detection
-            if (r > 250 && g > 250 && b > 250) {
-                blowOutCount += 1
-            }
-            totalCount += 1
+                let offset = (y * width + x) * 4
+                let b = Double(base[offset + 0])
+                let g = Double(base[offset + 1])
+                let r = Double(base[offset + 2])
+                
+                totalR += r
+                totalG += g
+                totalB += b
+                
+                // blow-out detection
+                if (r > 250 && g > 250 && b > 250) {
+                    blowOutCount += 1
+                }
+                totalCount += 1
             }
         }
 
@@ -173,8 +180,8 @@ extension VideoCaptureManager: AVCaptureVideoDataOutputSampleBufferDelegate {
             DispatchQueue.main.async {
                 self.lux = 0
                 self.luxHistory.append(0)
-                if self.luxHistory.count > 900 {
-                    self.luxHistory.removeFirst(self.luxHistory.count - 900)
+                if self.luxHistory.count > self.kLuxHistoryCount {
+                    self.luxHistory.removeFirst(self.luxHistory.count - self.kLuxHistoryCount)
                 }
                 self.showBlownOutWarning = false
             }
@@ -188,11 +195,11 @@ extension VideoCaptureManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         // 6) normalizing formula from stack overflow:
         // L_final = L * (apertureRef^2 / aperture^2) * (isoRef / iso) * (shutterSpeed / shutterRef)
         // Then multiply by an overall scale factor => approximate lux
-        let ratioAperture = Double(apertureRef*apertureRef) / Double(aperture*aperture)
-        let ratioISO = Double(isoRef) / Double(iso)
+        let ratioAperture = Double(aperture*aperture) / Double(apertureRef*apertureRef)
+        let ratioISO = Double(iso) / Double(iso/isoRef)
         let ratioShutter = Double(shutterSpeed) / Double(shutterRef)
         
-        let normalizedValue = avgLuma * ratioAperture * ratioISO * ratioShutter
+        let normalizedValue = avgLuma * ratioAperture / (ratioISO * ratioShutter)
         let approximateLux = Float(normalizedValue * luxScaleFactor)
         
         // 7) Print for debugging
@@ -208,8 +215,8 @@ extension VideoCaptureManager: AVCaptureVideoDataOutputSampleBufferDelegate {
             self.showBlownOutWarning = blowOutWarning
             
             self.luxHistory.append(approximateLux)
-            if self.luxHistory.count > 900 {
-                self.luxHistory.removeFirst(self.luxHistory.count - 900)
+            if self.luxHistory.count > self.kLuxHistoryCount {
+                self.luxHistory.removeFirst(self.luxHistory.count - self.kLuxHistoryCount)
             }
         }
     }

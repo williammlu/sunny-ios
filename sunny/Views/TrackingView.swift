@@ -1,4 +1,3 @@
-
 import SwiftUI
 import AVFoundation
 import Charts
@@ -20,17 +19,16 @@ struct TrackingView: View {
     // For time-of-day check
     @State private var isNight: Bool = false
     
-    // The total daily target in seconds
-    private var dailyTargetSeconds: Int {
-        userManager.user.goalMinutes * 60
-    }
+    // MARK: - Constants for “15 minutes” in UI
+    private let kTrackGoalMinutes = 15
+    private var kTrackGoalSeconds: Int { kTrackGoalMinutes * 60 }
     
     // Accumulated seconds user has so far for today's session
     @State private var accumulatedSeconds: Int = 0
     
     // Timer
     @State private var timer: Timer?
-    @State private var isRunning = false  // is the session actively counting up?
+    @State private var isRunning = false  // is the session actively counting
     
     // UI states for icons
     @State private var showMoon: Bool = false
@@ -42,6 +40,9 @@ struct TrackingView: View {
     
     // A local state to show a "toast" or ephemeral warning if camera is "blown out"
     @State private var showBlownOutToast: Bool = false
+    
+    // Show the camera feed at the top
+    private let showDebugCamera: Bool = true
     
     var body: some View {
         ZStack {
@@ -56,70 +57,73 @@ struct TrackingView: View {
             )
             .edgesIgnoringSafeArea(.all)
             
-            VStack(spacing: 16) {
+            VStack(spacing: 24) {
                 
-                // Title
-                Text("Sunlight Tracking")
-                    .font(.title2)
-                    .bold()
-                    .padding(.top, 16)
-                
-                // Our chart for last 15 min of lux
-                luxGraphView
-                
-                // Show the progress bar for daily target
-                progressBar
-                
-                if accumulatedSeconds < dailyTargetSeconds {
-                    if isRunning {
-                        Text("Session in progress...")
-                            .foregroundColor(.secondary)
-                        Text("\(timeString(accumulatedSeconds)) so far")
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("Session paused at \(timeString(accumulatedSeconds))")
-                            .foregroundColor(.secondary)
-                    }
-                } else {
-                    Text("You reached today's goal!")
-                        .foregroundColor(.green)
+                // Debug camera feed (100x100) at the top
+                if showDebugCamera {
+                    CameraPreviewView(session: captureManager.captureSession)
+                        .frame(width: 100, height: 100)
                 }
                 
-                // Pulsing icon
-                ZStack {
+                // Sun icon + condition text
+                VStack(spacing: 8) {
                     if showMoon {
                         moonIconView
-                            .frame(width: 120, height: 120)
-                            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true),
-                                       value: captureManager.lux)
+                            .frame(width: 60, height: 60)
                     } else if showBrightSun {
                         brightSunView
-                            .frame(width: 120, height: 120)
-                            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true),
-                                       value: captureManager.lux)
+                            .frame(width: 60, height: 60)
                     } else if showCloudySun {
                         cloudySunView
-                            .frame(width: 120, height: 120)
-                            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true),
-                                       value: captureManager.lux)
+                            .frame(width: 60, height: 60)
                     } else {
                         lowSunView
-                            .frame(width: 120, height: 120)
-                            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true),
-                                       value: captureManager.lux)
+                            .frame(width: 60, height: 60)
                     }
+                    
+                    Text(lightConditionText())
+                        .font(.headline)
                 }
-                .padding(.bottom, 8)
                 
-                Text(lightConditionText())
-                    .font(.headline)
+                // Lux count in large text
+                Text("\(Int(captureManager.lux)) Lux")
+                    .font(.largeTitle)
+                    .bold()
+                
+                // Time progress bar (GeometryReader + .clipShape)
+                VStack(spacing: 8) {
+                    Text("\(timeString(accumulatedSeconds)) / \(kTrackGoalMinutes) min")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .multilineTextAlignment(.center)
+                    
+                    let fraction = min(1.0, CGFloat(accumulatedSeconds) / CGFloat(kTrackGoalSeconds))
+                    let barWidth = UIScreen.main.bounds.width * 0.6
+                    let cornerRadius: CGFloat = 8
+                    
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            // Gray “track” (rounded corners)
+                            RoundedRectangle(cornerRadius: cornerRadius)
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(width: geo.size.width, height: 10)
+                            
+                            // Orange “fill” (no corner radius, we rely on clipping)
+                            Rectangle()
+                                .fill(Color.orange)
+                                .frame(width: fraction * geo.size.width, height: 10)
+                        }
+                        // Clipping the entire ZStack to a rounded shape
+                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                    }
+                    .frame(width: barWidth, height: 10)
+                }
                 
                 Spacer()
                 
-                // Session control buttons
+                // Session control buttons at bottom
                 HStack(spacing: 20) {
-                    if accumulatedSeconds < dailyTargetSeconds {
+                    if accumulatedSeconds < (userManager.user.goalMinutes * 60) {
                         Button(isRunning ? "Pause" : "Resume") {
                             toggleSession()
                         }
@@ -149,8 +153,7 @@ struct TrackingView: View {
                     .cornerRadius(8)
                 }
                 .padding(.horizontal, 40)
-                
-                Spacer()
+                .padding(.bottom, 20)
             }
             .padding()
             .sheet(isPresented: $showResultScreen) {
@@ -164,7 +167,7 @@ struct TrackingView: View {
                 )
             }
             
-            // A simple "toast" overlay if blowOut is detected
+            // Blow-out warning toast
             if showBlownOutToast {
                 VStack {
                     Text("Warning: The camera is overexposed. Lux readings may be inaccurate.")
@@ -173,12 +176,11 @@ struct TrackingView: View {
                         .foregroundColor(.white)
                         .cornerRadius(10)
                         .onTapGesture {
-                            // Dismiss on tap
                             showBlownOutToast = false
                         }
                 }
+                .padding(.top, 130)
                 .padding(.horizontal, 20)
-                .padding(.top, 80)
                 .transition(.move(edge: .top))
             }
         }
@@ -190,17 +192,14 @@ struct TrackingView: View {
             captureManager.stopSession()
             stopTimer()
         }
-        // Listen for blow-out warning changes
         .onChange(of: captureManager.showBlownOutWarning) { newVal in
-            // If camera sees >0.5% blown out => show a toast for 3s
-            if newVal == true {
+            if newVal {
                 showBlownOutToast = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                     showBlownOutToast = false
                 }
             }
         }
-        // Also onChange of the lux value => update icons
         .onChange(of: captureManager.lux) { newVal in
             updateLightCondition(brightness: newVal)
         }
@@ -209,47 +208,6 @@ struct TrackingView: View {
 
 // MARK: - Subviews
 extension TrackingView {
-    
-    @ViewBuilder
-    private var luxGraphView: some View {
-        if #available(iOS 16.0, *) {
-            Chart {
-                ForEach(Array(captureManager.luxHistory.enumerated()), id: \.offset) { (index, luxVal) in
-                    LineMark(
-                        x: .value("Time", index),
-                        y: .value("Lux", luxVal)
-                    )
-                }
-            }
-            .frame(height: 150)
-            .padding(.horizontal)
-        } else {
-            Text("Lux chart requires iOS 16+")
-                .foregroundColor(.secondary)
-        }
-    }
-    
-    private var progressBar: some View {
-        let fraction = min(1.0, CGFloat(accumulatedSeconds) / CGFloat(dailyTargetSeconds))
-        
-        return VStack(alignment: .leading) {
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.gray.opacity(0.2))
-                    .frame(height: 10)
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.orange)
-                    .frame(width: fraction * UIScreen.main.bounds.width * 0.6, height: 10)
-            }
-            .frame(height: 10)
-            
-            Text("\(timeString(accumulatedSeconds)) / \(timeString(dailyTargetSeconds))")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .padding(.horizontal, 20)
-    }
-    
     private var brightSunView: some View {
         Image(systemName: "sun.max.fill")
             .resizable()
@@ -280,7 +238,6 @@ extension TrackingView {
 
 // MARK: - Session Logic
 extension TrackingView {
-    
     private func toggleSession() {
         if isRunning {
             stopTimer()
@@ -294,8 +251,7 @@ extension TrackingView {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             accumulatedSeconds += 1
-            if accumulatedSeconds >= dailyTargetSeconds {
-                // Reached daily goal
+            if accumulatedSeconds >= (userManager.user.goalMinutes * 60) {
                 stopTimer()
             }
         }
@@ -368,5 +324,32 @@ extension TrackingView {
         let m = secs / 60
         let s = secs % 60
         return String(format: "%dm %02ds", m, s)
+    }
+}
+
+// MARK: - Camera Preview Helper
+import UIKit
+import AVKit
+
+struct CameraPreviewView: UIViewRepresentable {
+    /// Must NOT be private in your VideoCaptureManager
+    var session: AVCaptureSession?
+    
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        guard let session = session else { return view }
+        
+        let layer = AVCaptureVideoPreviewLayer(session: session)
+        layer.videoGravity = .resizeAspectFill
+        layer.frame = view.bounds
+        view.layer.addSublayer(layer)
+        
+        return view
+    }
+    
+    func updateUIView(_ uiView: UIView, context: Context) {
+        guard let session = session,
+              let layer = uiView.layer.sublayers?.first as? AVCaptureVideoPreviewLayer else { return }
+        layer.frame = uiView.bounds
     }
 }
