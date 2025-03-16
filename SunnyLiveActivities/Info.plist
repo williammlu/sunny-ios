@@ -4,9 +4,13 @@
 <dict>
 	<key>NSExtension</key>
 	<dict>
+		<key>New item</key>
+		<string></string>
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.widgetkit-extension</string>
-        <key>SupportsLiveActivities</key>
+		<key>SupportsLiveActivities</key>
+		<true/>
+        <key>NSSupportsLiveActivitiesFrequentUpdates</key>
         <true/>
 	</dict>
 </dict>

@@ -10,6 +10,8 @@
 		BB71AE1E2D864A5400FC4CA0 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB71AE1D2D864A5400FC4CA0 /* WidgetKit.framework */; };
 		BB71AE202D864A5400FC4CA0 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB71AE1F2D864A5400FC4CA0 /* SwiftUI.framework */; };
 		BB71AE2D2D864A5500FC4CA0 /* SunnyLiveActivitiesExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BB71AE1B2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		BB71AE422D8655FF00FC4CA0 /* libSunnyShared.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB71AE392D86550F00FC4CA0 /* libSunnyShared.a */; };
+		BB71AE452D86562B00FC4CA0 /* libSunnyShared.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BB71AE392D86550F00FC4CA0 /* libSunnyShared.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -19,6 +21,20 @@
 			proxyType = 1;
 			remoteGlobalIDString = BB71AE1A2D864A5400FC4CA0;
 			remoteInfo = SunnyLiveActivitiesExtension;
+		};
+		BB71AE432D8655FF00FC4CA0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BBDE3BB52D73CB87003F88D8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BB71AE382D86550F00FC4CA0;
+			remoteInfo = SunnyShared;
+		};
+		BB71AE462D86562B00FC4CA0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BBDE3BB52D73CB87003F88D8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BB71AE382D86550F00FC4CA0;
+			remoteInfo = SunnyShared;
 		};
 		BBDE3BCE2D73CB89003F88D8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -48,12 +64,22 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BB71AE372D86550F00FC4CA0 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "include/$(PRODUCT_NAME)";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		BB71AE1B2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SunnyLiveActivitiesExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB71AE1D2D864A5400FC4CA0 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		BB71AE1F2D864A5400FC4CA0 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		BB71AE392D86550F00FC4CA0 /* libSunnyShared.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSunnyShared.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		BBDE3BBD2D73CB87003F88D8 /* sunny.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = sunny.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BBDE3BCD2D73CB89003F88D8 /* sunnyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = sunnyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		BBDE3BD72D73CB89003F88D8 /* sunnyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = sunnyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -85,6 +111,11 @@
 			path = SunnyLiveActivities;
 			sourceTree = "<group>";
 		};
+		BB71AE3A2D86550F00FC4CA0 /* SunnyShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SunnyShared;
+			sourceTree = "<group>";
+		};
 		BBDE3BBF2D73CB87003F88D8 /* sunny */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -110,8 +141,16 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB71AE452D86562B00FC4CA0 /* libSunnyShared.a in Frameworks */,
 				BB71AE202D864A5400FC4CA0 /* SwiftUI.framework in Frameworks */,
 				BB71AE1E2D864A5400FC4CA0 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BB71AE362D86550F00FC4CA0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -119,6 +158,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB71AE422D8655FF00FC4CA0 /* libSunnyShared.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -155,6 +195,7 @@
 				BBDE3BD02D73CB89003F88D8 /* sunnyTests */,
 				BBDE3BDA2D73CB89003F88D8 /* sunnyUITests */,
 				BB71AE212D864A5400FC4CA0 /* SunnyLiveActivities */,
+				BB71AE3A2D86550F00FC4CA0 /* SunnyShared */,
 				BB71AE1C2D864A5400FC4CA0 /* Frameworks */,
 				BBDE3BBE2D73CB87003F88D8 /* Products */,
 			);
@@ -167,6 +208,7 @@
 				BBDE3BCD2D73CB89003F88D8 /* sunnyTests.xctest */,
 				BBDE3BD72D73CB89003F88D8 /* sunnyUITests.xctest */,
 				BB71AE1B2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension.appex */,
+				BB71AE392D86550F00FC4CA0 /* libSunnyShared.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -185,6 +227,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				BB71AE472D86562B00FC4CA0 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				BB71AE212D864A5400FC4CA0 /* SunnyLiveActivities */,
@@ -195,6 +238,28 @@
 			productName = SunnyLiveActivitiesExtension;
 			productReference = BB71AE1B2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
+		};
+		BB71AE382D86550F00FC4CA0 /* SunnyShared */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BB71AE3D2D86550F00FC4CA0 /* Build configuration list for PBXNativeTarget "SunnyShared" */;
+			buildPhases = (
+				BB71AE352D86550F00FC4CA0 /* Sources */,
+				BB71AE362D86550F00FC4CA0 /* Frameworks */,
+				BB71AE372D86550F00FC4CA0 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				BB71AE3A2D86550F00FC4CA0 /* SunnyShared */,
+			);
+			name = SunnyShared;
+			packageProductDependencies = (
+			);
+			productName = SunnyShared;
+			productReference = BB71AE392D86550F00FC4CA0 /* libSunnyShared.a */;
+			productType = "com.apple.product-type.library.static";
 		};
 		BBDE3BBC2D73CB87003F88D8 /* sunny */ = {
 			isa = PBXNativeTarget;
@@ -209,6 +274,7 @@
 			);
 			dependencies = (
 				BB71AE2C2D864A5500FC4CA0 /* PBXTargetDependency */,
+				BB71AE442D8655FF00FC4CA0 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				BBDE3BBF2D73CB87003F88D8 /* sunny */,
@@ -279,6 +345,9 @@
 					BB71AE1A2D864A5400FC4CA0 = {
 						CreatedOnToolsVersion = 16.1;
 					};
+					BB71AE382D86550F00FC4CA0 = {
+						CreatedOnToolsVersion = 16.1;
+					};
 					BBDE3BBC2D73CB87003F88D8 = {
 						CreatedOnToolsVersion = 16.1;
 					};
@@ -310,6 +379,7 @@
 				BBDE3BCC2D73CB89003F88D8 /* sunnyTests */,
 				BBDE3BD62D73CB89003F88D8 /* sunnyUITests */,
 				BB71AE1A2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension */,
+				BB71AE382D86550F00FC4CA0 /* SunnyShared */,
 			);
 		};
 /* End PBXProject section */
@@ -353,6 +423,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BB71AE352D86550F00FC4CA0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		BBDE3BB92D73CB87003F88D8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -381,6 +458,16 @@
 			isa = PBXTargetDependency;
 			target = BB71AE1A2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension */;
 			targetProxy = BB71AE2B2D864A5500FC4CA0 /* PBXContainerItemProxy */;
+		};
+		BB71AE442D8655FF00FC4CA0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BB71AE382D86550F00FC4CA0 /* SunnyShared */;
+			targetProxy = BB71AE432D8655FF00FC4CA0 /* PBXContainerItemProxy */;
+		};
+		BB71AE472D86562B00FC4CA0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BB71AE382D86550F00FC4CA0 /* SunnyShared */;
+			targetProxy = BB71AE462D86562B00FC4CA0 /* PBXContainerItemProxy */;
 		};
 		BBDE3BCF2D73CB89003F88D8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -446,6 +533,34 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		BB71AE3E2D86550F00FC4CA0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = BMMD5K9G2L;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		BB71AE3F2D86550F00FC4CA0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = BMMD5K9G2L;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -714,6 +829,15 @@
 			buildConfigurations = (
 				BB71AE2F2D864A5500FC4CA0 /* Debug */,
 				BB71AE302D864A5500FC4CA0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BB71AE3D2D86550F00FC4CA0 /* Build configuration list for PBXNativeTarget "SunnyShared" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB71AE3E2D86550F00FC4CA0 /* Debug */,
+				BB71AE3F2D86550F00FC4CA0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

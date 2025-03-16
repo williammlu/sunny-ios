@@ -1,15 +1,10 @@
 import SwiftUI
 import AVFoundation
 import Charts
-import ActivityKit
-import Foundation
+import ActivityKit // For requesting/updating Live Activities
+import SunnyShared
+// now the extension sees SunlightActivityAttributes
 
-public struct SunlightActivityAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
-        var elapsedSeconds: Int
-        var luxShort: Int
-    }
-}
 /// A struct for capturing brightness classification
 enum LightCondition {
     case veryBright
@@ -52,7 +47,7 @@ struct TrackingView: View {
     // Show the camera feed at the top
     private let showDebugCamera: Bool = true
     
-    // Hold reference to the live activity if running
+    // Reference to the ongoing Live Activity (if any)
     @State private var sunlightActivity: Activity<SunlightActivityAttributes>?
 
     var body: some View {
@@ -101,7 +96,7 @@ struct TrackingView: View {
                     .font(.largeTitle)
                     .bold()
                 
-                // Time progress bar (GeometryReader + .clipShape)
+                // Time progress bar
                 VStack(spacing: 8) {
                     Text("\(timeString(accumulatedSeconds)) / \(kTrackGoalMinutes) min")
                         .font(.title)
@@ -211,7 +206,7 @@ struct TrackingView: View {
                 }
             }
         }
-        // Whenever lux changes, we can update the live activity with the new short lux
+        // Whenever lux changes, we can update the live activity
         .onChange(of: captureManager.lux) { newVal in
             updateLightCondition(brightness: newVal)
             updateLiveActivity()
@@ -263,18 +258,14 @@ extension TrackingView {
         isRunning = true
         timer?.invalidate()
         
-        // Start or resume the session
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             accumulatedSeconds += 1
             if accumulatedSeconds >= (userManager.user.goalMinutes * 60) {
                 stopTimer()
             } else {
-                // Update the Live Activity each tick if desired
                 updateLiveActivity()
             }
         }
-        
-        // Start the live activity if iOS 16.1+
         startLiveActivityIfNeeded()
     }
     
@@ -282,8 +273,6 @@ extension TrackingView {
         isRunning = false
         timer?.invalidate()
         timer = nil
-        
-        // Optionally update or pause the live activity
         updateLiveActivity()
     }
     
@@ -293,7 +282,7 @@ extension TrackingView {
         userManager.trackSunlight(minutes: minutes)
         showResultScreen = true
         
-        // End the live activity (the session is done)
+        // End the live activity
         endLiveActivityIfNeeded()
     }
     
@@ -307,7 +296,14 @@ extension TrackingView {
 
 // MARK: - Live Activity Helpers
 extension TrackingView {
+    /// Request a new live activity if we haven't started one yet
     private func startLiveActivityIfNeeded() {
+        if #available(iOS 16.1, *) {
+            let info = ActivityAuthorizationInfo()
+            print("areActivitiesEnabled = \(info.areActivitiesEnabled)")
+        }
+        
+        
         guard #available(iOS 16.1, *), sunlightActivity == nil else { return }
         do {
             let initial = SunlightActivityAttributes.ContentState(
@@ -320,15 +316,16 @@ extension TrackingView {
                 contentState: initial,
                 pushType: nil
             )
+            print("Starting live activity: \(sunlightActivity)")
         } catch {
             print("Could not start live activity: \(error)")
         }
     }
     
+    /// Update the existing activity with current seconds + lux
     private func updateLiveActivity() {
         guard #available(iOS 16.1, *),
               let activity = sunlightActivity else { return }
-        
         Task {
             let newContent = SunlightActivityAttributes.ContentState(
                 elapsedSeconds: accumulatedSeconds,
@@ -338,11 +335,10 @@ extension TrackingView {
         }
     }
     
+    /// End the live activity once the session is done or user leaves
     private func endLiveActivityIfNeeded() {
         guard #available(iOS 16.1, *),
               let activity = sunlightActivity else { return }
-        
-        // Mark final content
         Task {
             let finalContent = SunlightActivityAttributes.ContentState(
                 elapsedSeconds: accumulatedSeconds,
@@ -408,7 +404,6 @@ import UIKit
 import AVKit
 
 struct CameraPreviewView: UIViewRepresentable {
-    /// Must NOT be private in your VideoCaptureManager
     var session: AVCaptureSession?
     
     func makeUIView(context: Context) -> UIView {
