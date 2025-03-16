@@ -6,7 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		BB71AE1E2D864A5400FC4CA0 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB71AE1D2D864A5400FC4CA0 /* WidgetKit.framework */; };
+		BB71AE202D864A5400FC4CA0 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB71AE1F2D864A5400FC4CA0 /* SwiftUI.framework */; };
+		BB71AE2D2D864A5500FC4CA0 /* SunnyLiveActivitiesExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BB71AE1B2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
+		BB71AE2B2D864A5500FC4CA0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BBDE3BB52D73CB87003F88D8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BB71AE1A2D864A5400FC4CA0;
+			remoteInfo = SunnyLiveActivitiesExtension;
+		};
 		BBDE3BCE2D73CB89003F88D8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = BBDE3BB52D73CB87003F88D8 /* Project object */;
@@ -23,13 +36,37 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		BB71AE322D864A5500FC4CA0 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				BB71AE2D2D864A5500FC4CA0 /* SunnyLiveActivitiesExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		BB71AE1B2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SunnyLiveActivitiesExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB71AE1D2D864A5400FC4CA0 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		BB71AE1F2D864A5400FC4CA0 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		BBDE3BBD2D73CB87003F88D8 /* sunny.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = sunny.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BBDE3BCD2D73CB89003F88D8 /* sunnyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = sunnyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		BBDE3BD72D73CB89003F88D8 /* sunnyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = sunnyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		BB71AE312D864A5500FC4CA0 /* Exceptions for "SunnyLiveActivities" folder in "SunnyLiveActivitiesExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = BB71AE1A2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension */;
+		};
 		BBDE3C072D73FE3F003F88D8 /* Exceptions for "sunny" folder in "sunny" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -40,6 +77,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		BB71AE212D864A5400FC4CA0 /* SunnyLiveActivities */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				BB71AE312D864A5500FC4CA0 /* Exceptions for "SunnyLiveActivities" folder in "SunnyLiveActivitiesExtension" target */,
+			);
+			path = SunnyLiveActivities;
+			sourceTree = "<group>";
+		};
 		BBDE3BBF2D73CB87003F88D8 /* sunny */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -61,6 +106,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		BB71AE182D864A5400FC4CA0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB71AE202D864A5400FC4CA0 /* SwiftUI.framework in Frameworks */,
+				BB71AE1E2D864A5400FC4CA0 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		BBDE3BBA2D73CB87003F88D8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -85,12 +139,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		BB71AE1C2D864A5400FC4CA0 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				BB71AE1D2D864A5400FC4CA0 /* WidgetKit.framework */,
+				BB71AE1F2D864A5400FC4CA0 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		BBDE3BB42D73CB87003F88D8 = {
 			isa = PBXGroup;
 			children = (
 				BBDE3BBF2D73CB87003F88D8 /* sunny */,
 				BBDE3BD02D73CB89003F88D8 /* sunnyTests */,
 				BBDE3BDA2D73CB89003F88D8 /* sunnyUITests */,
+				BB71AE212D864A5400FC4CA0 /* SunnyLiveActivities */,
+				BB71AE1C2D864A5400FC4CA0 /* Frameworks */,
 				BBDE3BBE2D73CB87003F88D8 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -101,6 +166,7 @@
 				BBDE3BBD2D73CB87003F88D8 /* sunny.app */,
 				BBDE3BCD2D73CB89003F88D8 /* sunnyTests.xctest */,
 				BBDE3BD72D73CB89003F88D8 /* sunnyUITests.xctest */,
+				BB71AE1B2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -108,6 +174,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		BB71AE1A2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BB71AE2E2D864A5500FC4CA0 /* Build configuration list for PBXNativeTarget "SunnyLiveActivitiesExtension" */;
+			buildPhases = (
+				BB71AE172D864A5400FC4CA0 /* Sources */,
+				BB71AE182D864A5400FC4CA0 /* Frameworks */,
+				BB71AE192D864A5400FC4CA0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				BB71AE212D864A5400FC4CA0 /* SunnyLiveActivities */,
+			);
+			name = SunnyLiveActivitiesExtension;
+			packageProductDependencies = (
+			);
+			productName = SunnyLiveActivitiesExtension;
+			productReference = BB71AE1B2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		BBDE3BBC2D73CB87003F88D8 /* sunny */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = BBDE3BE12D73CB89003F88D8 /* Build configuration list for PBXNativeTarget "sunny" */;
@@ -115,10 +203,12 @@
 				BBDE3BB92D73CB87003F88D8 /* Sources */,
 				BBDE3BBA2D73CB87003F88D8 /* Frameworks */,
 				BBDE3BBB2D73CB87003F88D8 /* Resources */,
+				BB71AE322D864A5500FC4CA0 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				BB71AE2C2D864A5500FC4CA0 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				BBDE3BBF2D73CB87003F88D8 /* sunny */,
@@ -186,6 +276,9 @@
 				LastSwiftUpdateCheck = 1610;
 				LastUpgradeCheck = 1610;
 				TargetAttributes = {
+					BB71AE1A2D864A5400FC4CA0 = {
+						CreatedOnToolsVersion = 16.1;
+					};
 					BBDE3BBC2D73CB87003F88D8 = {
 						CreatedOnToolsVersion = 16.1;
 					};
@@ -216,11 +309,19 @@
 				BBDE3BBC2D73CB87003F88D8 /* sunny */,
 				BBDE3BCC2D73CB89003F88D8 /* sunnyTests */,
 				BBDE3BD62D73CB89003F88D8 /* sunnyUITests */,
+				BB71AE1A2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		BB71AE192D864A5400FC4CA0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		BBDE3BBB2D73CB87003F88D8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -245,6 +346,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		BB71AE172D864A5400FC4CA0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		BBDE3BB92D73CB87003F88D8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -269,6 +377,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		BB71AE2C2D864A5500FC4CA0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BB71AE1A2D864A5400FC4CA0 /* SunnyLiveActivitiesExtension */;
+			targetProxy = BB71AE2B2D864A5500FC4CA0 /* PBXContainerItemProxy */;
+		};
 		BBDE3BCF2D73CB89003F88D8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = BBDE3BBC2D73CB87003F88D8 /* sunny */;
@@ -282,6 +395,62 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		BB71AE2F2D864A5500FC4CA0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BMMD5K9G2L;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SunnyLiveActivities/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SunnyLiveActivities;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wml.sunny.SunnyLiveActivities;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		BB71AE302D864A5500FC4CA0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BMMD5K9G2L;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SunnyLiveActivities/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SunnyLiveActivities;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wml.sunny.SunnyLiveActivities;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		BBDE3BDF2D73CB89003F88D8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -419,7 +588,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -451,7 +620,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -540,6 +709,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		BB71AE2E2D864A5500FC4CA0 /* Build configuration list for PBXNativeTarget "SunnyLiveActivitiesExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB71AE2F2D864A5500FC4CA0 /* Debug */,
+				BB71AE302D864A5500FC4CA0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		BBDE3BB82D73CB87003F88D8 /* Build configuration list for PBXProject "sunny" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

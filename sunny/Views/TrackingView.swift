@@ -1,7 +1,15 @@
 import SwiftUI
 import AVFoundation
 import Charts
+import ActivityKit
+import Foundation
 
+public struct SunlightActivityAttributes: ActivityAttributes {
+    public struct ContentState: Codable, Hashable {
+        var elapsedSeconds: Int
+        var luxShort: Int
+    }
+}
 /// A struct for capturing brightness classification
 enum LightCondition {
     case veryBright
@@ -44,6 +52,9 @@ struct TrackingView: View {
     // Show the camera feed at the top
     private let showDebugCamera: Bool = true
     
+    // Hold reference to the live activity if running
+    @State private var sunlightActivity: Activity<SunlightActivityAttributes>?
+
     var body: some View {
         ZStack {
             // Sunny background
@@ -103,17 +114,16 @@ struct TrackingView: View {
                     
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            // Gray “track” (rounded corners)
+                            // Gray track
                             RoundedRectangle(cornerRadius: cornerRadius)
                                 .fill(Color.gray.opacity(0.2))
                                 .frame(width: geo.size.width, height: 10)
                             
-                            // Orange “fill” (no corner radius, we rely on clipping)
+                            // Orange fill
                             Rectangle()
                                 .fill(Color.orange)
                                 .frame(width: fraction * geo.size.width, height: 10)
                         }
-                        // Clipping the entire ZStack to a rounded shape
                         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
                     }
                     .frame(width: barWidth, height: 10)
@@ -191,6 +201,7 @@ struct TrackingView: View {
         .onDisappear {
             captureManager.stopSession()
             stopTimer()
+            endLiveActivityIfNeeded()
         }
         .onChange(of: captureManager.showBlownOutWarning) { newVal in
             if newVal {
@@ -200,8 +211,10 @@ struct TrackingView: View {
                 }
             }
         }
+        // Whenever lux changes, we can update the live activity with the new short lux
         .onChange(of: captureManager.lux) { newVal in
             updateLightCondition(brightness: newVal)
+            updateLiveActivity()
         }
     }
 }
@@ -249,18 +262,29 @@ extension TrackingView {
     private func startTimer() {
         isRunning = true
         timer?.invalidate()
+        
+        // Start or resume the session
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             accumulatedSeconds += 1
             if accumulatedSeconds >= (userManager.user.goalMinutes * 60) {
                 stopTimer()
+            } else {
+                // Update the Live Activity each tick if desired
+                updateLiveActivity()
             }
         }
+        
+        // Start the live activity if iOS 16.1+
+        startLiveActivityIfNeeded()
     }
     
     private func stopTimer() {
         isRunning = false
         timer?.invalidate()
         timer = nil
+        
+        // Optionally update or pause the live activity
+        updateLiveActivity()
     }
     
     private func finishSessionForToday() {
@@ -268,6 +292,9 @@ extension TrackingView {
         let minutes = accumulatedSeconds / 60
         userManager.trackSunlight(minutes: minutes)
         showResultScreen = true
+        
+        // End the live activity (the session is done)
+        endLiveActivityIfNeeded()
     }
     
     private func startNewSession() {
@@ -275,6 +302,55 @@ extension TrackingView {
         showResultScreen = false
         isRunning = false
         startTimer()
+    }
+}
+
+// MARK: - Live Activity Helpers
+extension TrackingView {
+    private func startLiveActivityIfNeeded() {
+        guard #available(iOS 16.1, *), sunlightActivity == nil else { return }
+        do {
+            let initial = SunlightActivityAttributes.ContentState(
+                elapsedSeconds: accumulatedSeconds,
+                luxShort: Int(captureManager.lux)
+            )
+            let attrs = SunlightActivityAttributes()
+            sunlightActivity = try Activity<SunlightActivityAttributes>.request(
+                attributes: attrs,
+                contentState: initial,
+                pushType: nil
+            )
+        } catch {
+            print("Could not start live activity: \(error)")
+        }
+    }
+    
+    private func updateLiveActivity() {
+        guard #available(iOS 16.1, *),
+              let activity = sunlightActivity else { return }
+        
+        Task {
+            let newContent = SunlightActivityAttributes.ContentState(
+                elapsedSeconds: accumulatedSeconds,
+                luxShort: Int(captureManager.lux)
+            )
+            await activity.update(using: newContent)
+        }
+    }
+    
+    private func endLiveActivityIfNeeded() {
+        guard #available(iOS 16.1, *),
+              let activity = sunlightActivity else { return }
+        
+        // Mark final content
+        Task {
+            let finalContent = SunlightActivityAttributes.ContentState(
+                elapsedSeconds: accumulatedSeconds,
+                luxShort: Int(captureManager.lux)
+            )
+            await activity.end(using: finalContent, dismissalPolicy: .immediate)
+            sunlightActivity = nil
+        }
     }
 }
 
