@@ -12,5 +12,9 @@
 	<string>com.wml.sunny</string>
 	<key>UIRequiresPersistentWiFi</key>
 	<true/>
+    <key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array>
+        <string>com.sunny.scheduleSunTask</string>
+    </array>
 </dict>
 </plist>

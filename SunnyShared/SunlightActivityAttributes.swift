@@ -1,23 +1,25 @@
-//
-//  SunlightActivityAttributes.swift
-//  sunny
-//
-//  Created by William Lu on 3/15/25.
-//
-
 
 import ActivityKit
 import Foundation
 
+/// Shared by the main app + widget extension.
+/// We track a startDate for the system `.timer`
+/// and an isComplete flag to mark session done.
 public struct SunlightActivityAttributes: ActivityAttributes {
+
     public struct ContentState: Codable, Hashable {
-        public var elapsedSeconds: Int
-        public var luxShort: Int
-        public init(elapsedSeconds: Int, luxShort: Int) {
-            self.elapsedSeconds = elapsedSeconds
-            self.luxShort = luxShort
+        /// Whether the session is marked complete
+        public var isComplete: Bool
+        
+        /// The date the session started, used for the system-based `.timer`
+        public var startDate: Date
+        
+        public init(isComplete: Bool, startDate: Date) {
+            self.isComplete = isComplete
+            self.startDate = startDate
         }
     }
-    // Optionally init
+    
+    // Add optional static fields if needed.
     public init() { }
 }
